@@ -70,3 +70,4 @@ class Image(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     store_id = Column(Integer, nullable=False)
     image = Column(LargeBinary, nullable=True)
+

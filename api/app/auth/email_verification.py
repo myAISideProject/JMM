@@ -36,8 +36,8 @@ def is_valid_solideos_email(email):
     return re.match(r"[^@]+@solideos\.com$", email) is not None
 
 def send_email_verification_code(to_email):
-    if not is_valid_solideos_email(to_email):
-        raise ValueError("Invalid email address. Only @solideos.com addresses are allowed.")
+    # if not is_valid_solideos_email(to_email):
+    #     raise ValueError("Invalid email address. Only @solideos.com addresses are allowed.")
 
     creds = None
     if os.path.exists('token.json'):
@@ -58,7 +58,7 @@ def send_email_verification_code(to_email):
                 },
                 SCOPES
             )
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 

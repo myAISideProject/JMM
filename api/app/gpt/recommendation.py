@@ -16,6 +16,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 settings = get_settings()
 openai.api_key = settings.openai_api_key
 
+class RecommendationTracker:
+    def __init__(self):
+        self.recent_recommendations = []
+
+    def update_recommendations(self, new_id):
+        if len(self.recent_recommendations) >= 3:
+            self.recent_recommendations.pop(0)
+        self.recent_recommendations.append(new_id)
+
+    def is_recently_recommended(self, store_id):
+        return store_id in self.recent_recommendations
+
+recommendation_tracker = RecommendationTracker()
+
 def fetch_all_menus():
     db = SessionLocal()
     try:
@@ -73,6 +87,39 @@ def fetch_random_ai_summarize_with_image():
         ai_summarize = store_info.ai_summarize
         ai_summarize = re.sub(r'\n\n', ' ', ai_summarize)
         ai_summarize = re.sub(r'\n', ' ', ai_summarize)    
+        print(ai_summarize)
+        return {
+            "business_name": store_info.business_name,
+            "business_type": store_info.business_type,
+            "ai_summarize": ai_summarize,
+            "image_data": f"![image](data:image/png;base64,{image_data})" if image_data else None,
+        }
+    finally:
+        db.close()
+
+def fetch_random_ai_summarize_with_image_is_in_building():
+    db = SessionLocal()
+    try:
+        store_ids = db.query(StoresWithinRange.id).filter(StoresWithinRange.is_in_company_building == True).all()
+        if not store_ids:
+            return None
+        
+        valid_store_ids = [store_id[0] for store_id in store_ids if not recommendation_tracker.is_recently_recommended(store_id[0])]
+        if not valid_store_ids:
+            return None
+
+        random_id = random.choice(valid_store_ids)
+
+        recommendation_tracker.update_recommendations(random_id)
+
+        store_info = db.query(StoresWithinRange).filter(StoresWithinRange.id == random_id).first()
+
+        image_record = db.query(Image).filter(Image.store_id == random_id).first()
+        image_data = base64.b64encode(image_record.image).decode('utf-8') if image_record else None
+
+        ai_summarize = store_info.ai_summarize
+        ai_summarize = re.sub(r'\n\n', ' ', ai_summarize)
+        ai_summarize = re.sub(r'\n', ' ', ai_summarize)
         print(ai_summarize)
         return {
             "business_name": store_info.business_name,
